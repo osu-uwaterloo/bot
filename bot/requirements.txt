@@ -1,0 +1,4 @@
+hikari-lightbulb==2.3.5
+python-dotenv==1.0.1
+requests==2.32.3
+ossapi==4.0.0

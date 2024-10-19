@@ -1,0 +1,5 @@
+requests==2.32.3
+libvalkey==4.0.0
+valkey==6.0.2
+fastapi[standard]==0.114.2
+python-dotenv==1.0.1
