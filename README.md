@@ -7,7 +7,7 @@
 ## Setup
 1. Create a new app in the [Discord developer portal](https://discord.com/developers/applications), and invite it to your server with <insert_permissions_here>
 2. Create a new OAuth application in [osu!](https://osu.ppy.sh/home/account/edit#oauth) 
-3. [Create a Google Service Account](https://cloud.google.com/iam/docs/service-accounts-create) and download the JSON file containing its credentials. Rename the file to `service_acc_keys.json` and place it under the `bot` subdirectory.
+3. [Create a Google Service Account](https://cloud.google.com/iam/docs/service-accounts-create) and download the JSON file containing its credentials. Rename the file to `service_acc_keys.json` and place it under the `bot` directory.
 4. Create a `.env` file under both the `auth` and `bot` directories
     ```.env
     # auth/.env
