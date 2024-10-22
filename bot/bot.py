@@ -22,9 +22,11 @@ osu_api = ossapi.Ossapi(config.CLIENT_ID, config.CLIENT_SECRET)
 
 # Get Google Sheets API client
 sheets_api = SheetsAPI(
-    sheet_id=config.GOOGLE_SHEET_ID, sheet_name=config.GOOGLE_SHEET_NAME,
-    cell_range=config.GOOGLE_SHEET_CELL_RANGE, service_acc_file=config.GOOGLE_SERVICE_ACCOUNT_CREDS_FILE
-    )
+    sheet_id=config.GOOGLE_SHEET_ID,
+    sheet_name=config.GOOGLE_SHEET_NAME,
+    cell_range=config.GOOGLE_SHEET_CELL_RANGE,
+    service_acc_file=config.GOOGLE_SERVICE_ACCOUNT_CREDS_FILE
+)
 
 # SQLite db connection
 user_util = User(db)
