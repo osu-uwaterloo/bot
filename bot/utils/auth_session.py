@@ -45,6 +45,8 @@ class AuthSession:
         while self.code in used_codes:
             self.code = self.generate_code()
 
+        return self.code
+
 
     def save(self):
         expires = datetime.now() + self.code_duration
