@@ -1,3 +1,5 @@
+import sqlite3
+
 import hikari
 import lightbulb
 from ossapi import Ossapi
@@ -14,18 +16,20 @@ from utils.google import SheetsAPI
 @lightbulb.implements(lightbulb.SlashCommand)
 async def woc_profile(ctx: lightbulb.SlashContext) -> None:
     """View your Wo!C profile"""
-    user_util: User = plugin.bot.d.user_util
+    db : sqlite3.Connection = plugin.bot.d.db
     osu_api: Ossapi = plugin.bot.d.osu_api
     sheets_api: SheetsAPI = plugin.bot.d.sheets_api
     
-    user: hikari.Member = ctx.options.user
-    if user is None:
-        bancho_id = user_util.get_bancho_user_id(ctx)
+    if ctx.options.user is None:
+        user = User(db, ctx.author.id)
     else:
+        user = User(db, ctx.options.user.id)
+
+    if user.bancho_id is None:
         raise UserNotConnectedError
 
-    osu_user = osu_api.user(bancho_id)
-    woc_user_data = user_util.get_woc_user(bancho_id, sheets_api)
+    osu_user = osu_api.user(user.bancho_id)
+    woc_user_data = user.get_woc_user(sheets_api)
     results = [0, 0, 0, 0]
     if woc_user_data is None:
         await ctx.respond("Bad")

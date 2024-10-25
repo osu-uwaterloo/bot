@@ -23,9 +23,6 @@ osu_api = ossapi.Ossapi(config.CLIENT_ID, config.CLIENT_SECRET)
 # Get Google Sheets API client
 sheets_api = SheetsAPI(config.GOOGLE_SHEET_ID, config.GOOGLE_SHEET_NAME, config.GOOGLE_SHEET_CELL_RANGE, config.GOOGLE_API_KEY)
 
-# SQLite db connection
-user_util = User(db)
-
 # Setup bot
 bot = lightbulb.BotApp(
     token=config.DISCORD_TOKEN,
@@ -33,7 +30,6 @@ bot = lightbulb.BotApp(
 )
 bot.d.osu_api = osu_api
 bot.d.sheets_api = sheets_api
-bot.d.user_util = user_util
 bot.d.db = db
 
 bot.load_extensions_from("./extensions", recursive=True)
@@ -55,9 +51,13 @@ async def ping(ctx: lightbulb.SlashContext) -> None:
 @lightbulb.implements(lightbulb.SlashCommand)
 async def profile(ctx: lightbulb.SlashContext) -> None:
     """View your profile"""
-    bancho_id = user_util.get_bancho_user_id(ctx)
-    user = osu_api.user(bancho_id)
-    await ctx.respond(f"You are {user.username}")
+    user = User(db, ctx.author.id)
+
+    if user.bancho_id is not None:
+        osu_user = osu_api.user(user.bancho_id)
+        await ctx.respond(f"You are {osu_user.username}")
+    else:
+        await ctx.respond(f"You are not logged into osu!")
 
 
 # Start running bot (blocking call)

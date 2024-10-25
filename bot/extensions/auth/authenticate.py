@@ -8,6 +8,8 @@ import requests
 
 from extensions.auth import plugin
 from utils import config
+from utils.user import User
+
 
 @plugin.command
 @lightbulb.command("authenticate", "Authenticate as an osu! user on Bancho")
@@ -46,13 +48,15 @@ async def authenticate(ctx: lightbulb.SlashContext) -> None:
         await ctx.respond("Timed out, please try again", flags=hikari.MessageFlag.EPHEMERAL)
         return
 
-    cur = db.cursor()
     discord_id = int(ctx.author.id)
     bancho_id = int(user_id)
-    cur.execute("INSERT INTO users VALUES (?, ?)", (discord_id, bancho_id))
-    db.commit()
+    user = User(db, discord_id, bancho_id)
+    res = user.insert()
+    if res is not None:
+        await ctx.respond(f"Successfully authenticated as Bancho user {bancho_id}!", flags=hikari.MessageFlag.EPHEMERAL)
+    else:
+        await ctx.respond(f"Failed to authenticate as a Bancho user.", flags=hikari.MessageFlag.EPHEMERAL)
 
-    await ctx.respond(f"Successfully authenticated as Bancho user {bancho_id}!", flags=hikari.MessageFlag.EPHEMERAL)
 
 def load(_: lightbulb.Plugin) -> None:
     pass
