@@ -9,6 +9,9 @@ import lightbulb
 from exchangelib import Credentials, Account, Message, DELEGATE
 
 from datetime import timedelta
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 @plugin.command
 @lightbulb.option(name="email", required=True, description="Your UWaterloo email address")
@@ -33,18 +36,7 @@ async def verify(ctx: lightbulb.SlashContext):
         await ctx.respond("You can only verify with a uwaterloo email address.", flags=hikari.MessageFlag.EPHEMERAL)
         return
     
-    await ctx.respond("This command isn't ready yet XD") # REMOVE THESE TWO LINES WHEN FIXED
-    return
-    
     db: sqlite3.Connection = plugin.bot.d.db
-
-    credentials = Credentials(config.EMAIL_ADDRESS, config.EMAIL_PASSWORD)
-    account = Account(
-        config.EMAIL_ADDRESS,
-        credentials=credentials,
-        autodiscover=True,
-        access_type=DELEGATE
-    )
 
     sess = AuthSession(
         db,
@@ -55,18 +47,28 @@ async def verify(ctx: lightbulb.SlashContext):
 
     code = sess.prepare()
 
-    message = Message(
-        account=account,
-        folder=account.sent,
-        subject="osu!UWaterloo Verification Code",
-        body=f"Your osu!Uwaterloo Verification Code is {code}",
-        to_recipients=[candidate_email]
-    )
+    msg = MIMEMultipart()
+    msg["From"] = config.EMAIL_ADDRESS
+    msg["To"] = candidate_email
+    msg["Subject"] = "osu!UWaterloo email verification"
 
-    message.send()
-    sess.save()
+    body = f"Your osu!UWaterloo email verification code is {code}"
+    msg.attach(MIMEText(body, "plain"))
 
-    await ctx.respond("End of test", flags=hikari.MessageFlag.EPHEMERAL)
+    port = 587
+    try:
+        with smtplib.SMTP(config.EMAIL_SERVER, port) as server:
+            server.starttls()
+            server.login(config.EMAIL_ADDRESS, config.EMAIL_PASSWORD)
+            sess.save()
+            server.sendmail(config.EMAIL_ADDRESS, candidate_email, msg.as_string())
+    except Exception as e:
+        print(f"ERROR OCCURRED DURING EMAIL SEND: {e}")
+        await ctx.respond("Something went wrong. Check logs.")
+        return
+    
+    await ctx.respond("End of test.")
+
 
 
 def load(_: lightbulb.Plugin) -> None:
