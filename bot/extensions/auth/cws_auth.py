@@ -1,17 +1,38 @@
 import sqlite3
 
+import hikari.components
+import miru.text_input
+
 from extensions.auth import plugin
 from utils import config
 from utils.auth_session import AuthSession
 
 import hikari
 import lightbulb
-from exchangelib import Credentials, Account, Message, DELEGATE
+import miru
 
 from datetime import timedelta
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+class CodeInputModal(miru.Modal, title="osu!UWaterloo Student Email Verification"):
+
+    code_input = miru.TextInput(
+        label = "Verification Code",
+        placeholder="Enter code here...",
+        required=True,
+        style=hikari.TextInputStyle.SHORT
+    )
+
+    async def callback(self, ctx: miru.ModalContext):
+        res = AuthSession.validate(self.code_input.value, plugin.bot.d.db)
+        if not res["success"]:
+            await ctx.respond(f"Verification failed. Reason: {res["reason"]}", flags=hikari.MessageFlag.EPHEMERAL)
+            return
+        
+        await ctx.respond("Verification successful!", flags=hikari.MessageFlag.EPHEMERAL)
+
 
 @plugin.command
 @lightbulb.option(name="email", required=True, description="Your UWaterloo email address")
@@ -24,6 +45,10 @@ async def verify(ctx: lightbulb.SlashContext):
 
     Note: The actual email part isn't working yet.
     """
+
+    # need to check if user already has the cws role
+    # ...
+    
     options = ctx.options.items()
     
     candidate_email: str = None
@@ -67,8 +92,14 @@ async def verify(ctx: lightbulb.SlashContext):
         await ctx.respond("Something went wrong. Check logs.")
         return
     
-    await ctx.respond("End of test.")
+    client: miru.Client = plugin.bot.d.miru
+    modal = CodeInputModal()
+    builder = modal.build_response(client)
 
+    await builder.create_modal_response(ctx.interaction)
+    client.start_modal(modal)
+
+        
 
 
 def load(_: lightbulb.Plugin) -> None:

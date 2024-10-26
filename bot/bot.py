@@ -3,6 +3,7 @@ import sqlite3
 import lightbulb
 import hikari
 import ossapi
+import miru
 
 from extensions.auth import plugin as plugin_auth
 from extensions.woc import plugin as plugin_woc
@@ -36,6 +37,7 @@ bot = lightbulb.BotApp(
 bot.d.osu_api = osu_api
 bot.d.sheets_api = sheets_api
 bot.d.db = db
+bot.d.miru = miru.Client(bot)
 
 bot.load_extensions_from("./extensions", recursive=True)
 bot.add_plugin(plugin_auth)
