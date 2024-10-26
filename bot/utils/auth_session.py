@@ -13,11 +13,11 @@ class AuthSession:
         self.code_duration = code_duration
         self.chars = list(string.ascii_lowercase) + list(range(1, 10))
 
-
-    def delete(self, id: int):
-        cursor = self.db.cursor()
+    @classmethod
+    def delete(cls, id: int, db: sqlite3.Connection):
+        cursor = db.cursor()
         cursor.execute("DELETE FROM auth_sessions WHERE id=(?);", (id,))
-        self.db.commit()
+        db.commit()
 
     def generate_code(self):
         return "".join([str(random.choice(self.chars)) for i in range(self.code_len)])
@@ -37,7 +37,7 @@ class AuthSession:
         for sess in active_sessions:
             expire_dt = datetime.fromisoformat(sess[2])
             if datetime.now() > expire_dt:
-                self.delete(sess[0])
+                self.delete(sess[0], self.db)
             else:
                 used_codes.append(sess[1])
 
@@ -57,12 +57,12 @@ class AuthSession:
         )
         self.db.commit()
 
-    
-    def validate(self, code: str):
+    @classmethod
+    def validate(cls, code: str, db: sqlite3.Connection):
         if code is None or len(code) == 0:
             return {"success": False, "reason": "No code provided"}
         
-        cursor = self.db.cursor()
+        cursor = db.cursor()
         res = cursor.execute("SELECT id, expires FROM auth_sessions WHERE code=(?);", (code,))
         sess = res.fetchone()
 
@@ -71,10 +71,10 @@ class AuthSession:
         
         expires = datetime.fromisoformat(sess[1])
         if datetime.now() > expires:
-            self.delete(sess[0])
+            cls.delete(sess[0], db)
             return {"success": False, "reason": "Session expired"}
         
-        self.delete(sess[0])
+        cls.delete(sess[0], db)
         return {"success": True}
 
         
