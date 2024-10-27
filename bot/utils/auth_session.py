@@ -4,14 +4,19 @@ from datetime import datetime, timedelta
 import string
 import random
 
+from utils import config
+from utils.exceptions import MaxSessionsExceededError
+
+
 class AuthSession:
-    def __init__(self, db: sqlite3.Connection, target_email: str, code_len: int, code_duration: timedelta) -> None:
+    def __init__(self, db: sqlite3.Connection, discord_uid: int, target_email: str, code_len: int, code_duration: timedelta) -> None:
         self.db = db
         self.target_email = target_email
         self.code = ""
         self.code_len = code_len
         self.code_duration = code_duration
         self.chars = list(string.ascii_lowercase) + list(range(1, 10))
+        self.discord_uid = discord_uid
 
     @classmethod
     def delete(cls, id: int, db: sqlite3.Connection):
@@ -26,20 +31,26 @@ class AuthSession:
     def prepare(self):
         cursor = self.db.cursor()
         cursor.execute(
-            "CREATE TABLE IF NOT EXISTS auth_sessions (id INTEGER PRIMARY KEY, email TEXT, code TEXT, expires TEXT);"
+            "CREATE TABLE IF NOT EXISTS auth_sessions (id INTEGER PRIMARY KEY, discord_uid INTEGER, email TEXT, code TEXT, expires TEXT);"
         )
         self.db.commit()
 
-        res = cursor.execute("SELECT id, code, expires FROM auth_sessions;")
+        res = cursor.execute("SELECT id, discord_uid, code, expires FROM auth_sessions;")
         active_sessions = res.fetchall()
 
         used_codes = []
+        user_sessions = 0
         for sess in active_sessions:
-            expire_dt = datetime.fromisoformat(sess[2])
+            expire_dt = datetime.fromisoformat(sess[3])
             if datetime.now() > expire_dt:
                 self.delete(sess[0], self.db)
             else:
-                used_codes.append(sess[1])
+                used_codes.append(sess[2])
+                if sess[1] == self.discord_uid:
+                    user_sessions += 1
+
+        if user_sessions > config.MAX_AUTH_SESSIONS:
+            raise MaxSessionsExceededError()
 
         self.code = self.generate_code()
         while self.code in used_codes:
@@ -52,8 +63,8 @@ class AuthSession:
         expires = datetime.now() + self.code_duration
         cursor = self.db.cursor()
         cursor.execute(
-            "INSERT INTO auth_sessions (email, code, expires) VALUES (?, ?, ?);",
-            (self.target_email, self.code, expires.isoformat())
+            "INSERT INTO auth_sessions (email, discord_uid, code, expires) VALUES (?, ?, ?, ?);",
+            (self.target_email, self.discord_uid, self.code, expires.isoformat())
         )
         self.db.commit()
 

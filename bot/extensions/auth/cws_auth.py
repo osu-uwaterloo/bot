@@ -6,6 +6,7 @@ import miru.text_input
 from extensions.auth import plugin
 from utils import config
 from utils.auth_session import AuthSession
+from utils.exceptions import MaxSessionsExceededError
 
 import hikari
 import lightbulb
@@ -31,6 +32,8 @@ class CodeInputModal(miru.Modal, title="osu!UWaterloo Student Email Verification
             await ctx.respond(f"Verification failed. Reason: {res["reason"]}", flags=hikari.MessageFlag.EPHEMERAL)
             return
         
+        if config.CWS_ROLE_ID != -1:
+            await ctx.member.add_role(config.CWS_ROLE_ID)
         await ctx.respond("Verification successful!", flags=hikari.MessageFlag.EPHEMERAL)
 
 
@@ -39,15 +42,11 @@ class CodeInputModal(miru.Modal, title="osu!UWaterloo Student Email Verification
 @lightbulb.command("verify", "Authenticate as a current waterloo student")
 @lightbulb.implements(lightbulb.SlashCommand)
 async def verify(ctx: lightbulb.SlashContext):
-    """
-    This is just a test implementation to see if email works.
-    It does not support actual code validation yet.
 
-    Note: The actual email part isn't working yet.
-    """
-
-    # need to check if user already has the cws role
-    # ...
+    if (config.CWS_ROLE_ID != -1) and (config.CWS_ROLE_ID in ctx.member.role_ids):
+        await ctx.respond("You are already verified!", flags=hikari.MessageFlag.EPHEMERAL)
+        return
+    
     
     options = ctx.options.items()
     
@@ -65,12 +64,20 @@ async def verify(ctx: lightbulb.SlashContext):
 
     sess = AuthSession(
         db,
+        ctx.author.id,
         candidate_email,
-        15,
-        timedelta(minutes=15)
+        config.AUTH_CODE_LEN,
+        timedelta(minutes=config.AUTH_CODE_DURATION)
     )
 
-    code = sess.prepare()
+    try:
+        code = sess.prepare()
+    except MaxSessionsExceededError:
+        await ctx.respond(
+            "You are making too many verification requests too quickly! Please try again after a few minutes.",
+            flags=hikari.MessageFlag.EPHEMERAL
+        )
+        return
 
     msg = MIMEMultipart()
     msg["From"] = config.EMAIL_ADDRESS

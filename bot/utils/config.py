@@ -20,3 +20,9 @@ GOOGLE_SHEET_CELL_RANGE = os.getenv("GOOGLE_SHEET_CELL_RANGE", "")
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS", "")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
 EMAIL_SERVER = os.getenv("EMAIL_SERVER", "")
+MAX_AUTH_SESSIONS = int(os.getenv("MAX_AUTH_SESSIONS", 5))
+
+AUTH_CODE_LEN = int(os.getenv("AUTH_CODE_LEN", 15))
+AUTH_CODE_DURATION = int(os.getenv("AUTH_CODE_DURATION", 5))
+
+CWS_ROLE_ID = int(os.getenv("CWS_ROLE_ID", -1))
