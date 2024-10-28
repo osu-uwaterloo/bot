@@ -20,15 +20,35 @@ class AuthSession:
 
     @classmethod
     def delete(cls, id: int, db: sqlite3.Connection):
+        """
+        This is not used by client code. Can be modified/removed as needed
+        """
         cursor = db.cursor()
         cursor.execute("DELETE FROM auth_sessions WHERE id=(?);", (id,))
         db.commit()
 
     def generate_code(self):
+        """
+        Generates the verification code by choosing a random sequence of `self.code_len`
+        characters from ASCII and digits 1-9
+        """
         return "".join([str(random.choice(self.chars)) for i in range(self.code_len)])
 
 
     def prepare(self):
+        """
+        `prepare()` first checks the database to see if the verifying user already has
+        `config.MAX_AUTH_SESSIONS` active verification sessions (active as in
+        non-expired). If the user does, then a `MaxSessionsExceededError` is raised.
+
+        Next it generates a verification code of length `self.code_len` which is not
+        used by any other active verification session.
+
+        Finally, it returns the verification code.
+
+        The call signature for this method should not be modified, as it is used
+        by client code.
+        """
         cursor = self.db.cursor()
         cursor.execute(
             "CREATE TABLE IF NOT EXISTS auth_sessions (id INTEGER PRIMARY KEY, discord_uid INTEGER, email TEXT, code TEXT, expires TEXT);"
@@ -60,6 +80,18 @@ class AuthSession:
 
 
     def save(self):
+        """
+        `save()` first computes the verification session's expiry time by
+        adding `self.code_duration` to the current time returned by `datetime.now()`.
+
+        Then, it writes the session to the database. The fields that are written should
+        include the verifying user's email, discord id, and the verification code.
+
+        How the expiry date is handled is up to the implementation details.
+
+        The call signature for this method should not be modified, as it is
+        used by client code.
+        """
         expires = datetime.now() + self.code_duration
         cursor = self.db.cursor()
         cursor.execute(
@@ -69,12 +101,33 @@ class AuthSession:
         self.db.commit()
 
     @classmethod
-    def validate(cls, code: str, db: sqlite3.Connection):
+    def validate(cls, code: str, discord_uid: int, db: sqlite3.Connection):
+        """
+        `validate()` validates the provided verification code
+        by checking if the provided verification code `code` corresponds
+        to an active verification session for the verifying user `discord_uid`.
+        Only non-expired sessions count as being "active".
+        
+        If the validation fails for any reason, the method returns
+        `{
+           "success": False,
+           "reason": "<reason for failure>"
+        }`.
+
+        Otherwise, the method returns `{"success": True}`.
+
+        The call signature for this method should not be modified, as it is used by
+        client code. If any parameters become unnecessary, just leave them in for now.
+        """
         if code is None or len(code) == 0:
             return {"success": False, "reason": "No code provided"}
         
         cursor = db.cursor()
-        res = cursor.execute("SELECT id, expires FROM auth_sessions WHERE code=(?);", (code,))
+        res = cursor.execute(
+            "SELECT id, expires FROM auth_sessions WHERE code=(?) AND discord_uid=(?);",
+            (code, discord_uid)
+        )
+
         sess = res.fetchone()
 
         if sess is None:

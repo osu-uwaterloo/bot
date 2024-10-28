@@ -27,7 +27,7 @@ class CodeInputModal(miru.Modal, title="osu!UWaterloo Student Email Verification
     )
 
     async def callback(self, ctx: miru.ModalContext):
-        res = AuthSession.validate(self.code_input.value, plugin.bot.d.db)
+        res = AuthSession.validate(self.code_input.value, ctx.member.id, plugin.bot.d.db)
         if not res["success"]:
             await ctx.respond(f"Verification failed. Reason: {res["reason"]}", flags=hikari.MessageFlag.EPHEMERAL)
             return
